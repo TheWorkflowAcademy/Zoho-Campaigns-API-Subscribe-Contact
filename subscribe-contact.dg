@@ -1,0 +1,52 @@
+/*
+
+ Parameters:
+ 	[CONTACT_ID : Int]
+	
+ */
+
+// Get Contact Record
+contact = zoho.crm.getRecordById("Contacts", CONTACT_ID);
+email = contact.get("Email");
+firstName = contact.get("First_Name");
+lastName = contact.get("Last_Name");
+
+// Get All Mailing Lists.
+mailingListsResponse = invokeurl [
+	url: "https://campaigns.zoho.com/api/v1.1/getmailinglists?resfmt=JSON"
+	type: GET
+	connection: "zoho_campaigns"
+];
+mailingLists = mailingListsResponse.get("list_of_details");
+
+// Find the "General Marketing"" list by its name.
+generalMarketingList = null;
+for each mailingList in mailingLists {
+	mailingListName = mailingList.get("listname");
+	if(mailingListName == "General Marketing") {
+		generalMarketingList = mailingList;
+	}
+}
+
+// If "General Marketing" Mailing List was found, subscribe the Contact.
+if(!generalMarketingList.isNull()) {
+	
+	// Get the List Key that is used in the API Request.
+	listKey = generalMarketingList.get("listkey");
+	
+	// Create Map for the Contact and format it as a URL Encoded string.
+	contactMap = Map();
+	contactMap.put("Contact Email", email);
+	contactMap.put("First Name", firstName);
+	contactMap.put("Last Name", lastName);
+	contactJsonString = contactMap.toString();
+	contactJsonStringEncoded = zoho.encryption.urlEncode(contactJsonString);
+	
+	// Subscribe the Contact via API.
+	subscribeContactResponse = invokeurl [
+	url: "https://campaigns.zoho.com/api/v1.1/json/listsubscribe?resfmt=JSON&listkey=" + listKey + "&contactinfo=" + contactJsonStringEncoded
+		type: POST
+		connection: "zoho_campaigns"
+	];
+	info subscribeContactResponse;
+}
